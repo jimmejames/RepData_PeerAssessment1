@@ -1,25 +1,83 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+Reproducible Results- Project #1
+================================
+## 1
+Set working director and download/unzip applicable files
+```{r echo=TRUE}
+#setwd("RR")
+#download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip","activity.zip")
+#unzip("activity.zip")
+activity <- read.csv("activity.csv")
+```
 
+## 2
+Sum the steps per day and create associated histogram
+```{r echo=TRUE}
+stepsPerDay <- aggregate(activity$steps, by=list(date=activity$date),FUN=sum)
+names(stepsPerDay) = c("Date", "StepsPerDay")
+hist(stepsPerDay$StepsPerDay, breaks=nrow(stepsPerDay), main="Histogram Step Counts Per Day", xlab="Step Counts Per Day")
+```
 
-## Loading and preprocessing the data
+## 3
+Mean and Medians:
+```{r echo=TRUE}
+mean(stepsPerDay$StepsPerDay, na.rm=TRUE)
+median(stepsPerDay$StepsPerDay, na.rm=TRUE)
+```
 
+## 4
+Time series plot
+```{r echo=TRUE}
+fiveMinInterval <- aggregate(activity$steps, by=list(interval=activity$interval),FUN=mean, na.rm=TRUE)
+names(fiveMinInterval) = c("interval","averageStepsPerDay")
+plot(fiveMinInterval$interval, fiveMinInterval$averageStepsPerDay, type="l", main="Average Steps Per Interval At Each Day", xlab="interval", ylab="average each day")
+```
 
+## 5
+Interval with maximum average
+```{r echo=TRUE}
+fiveMinInterval[which.max(fiveMinInterval$averageStepsPerDay),1]
+```
 
-## What is mean total number of steps taken per day?
+## 6
+Replace missing data with average of all others prior to replacing NA's:
+Number of NA rows:
+```{r echo=TRUE}
+NArows <- nrow(is.na(activity$steps))
+```
 
+Replace NA rows with average of others and store in new database
+```{r echo=TRUE}
+averageNonMissing <- mean(activity$steps, na.rm=TRUE)
+tempActivity <- activity
+tempActivity[,1] <- ifelse(is.na(activity$steps),averageNonMissing, activity$steps)
+```
 
+## 7
+Sum the new steps per day and create associated histogram
+```{r echo=TRUE}
+newstepsPerDay <- aggregate(activity$steps, by=list(date=activity$date),FUN=sum)
+names(newstepsPerDay) = c("Date", "StepsPerDay")
+hist(newstepsPerDay$StepsPerDay, breaks=nrow(newstepsPerDay), main="New Histogram Step Counts Per Day", xlab="Step Counts Per Day")
+```
 
-## What is the average daily activity pattern?
+New Mean and Medians:
+```{r echo=TRUE}
+mean(newstepsPerDay$StepsPerDay, na.rm=TRUE)
+median(newstepsPerDay$StepsPerDay, na.rm=TRUE)
+```
+Do these values differ from the estimates from the first part of the assignment?  **Yes**  
+What is the impact of imputing missing data on the estimates of the total daily number of steps? **Estimates increase**
 
+## 8
+Restart array and sort weekdays from weekends and panel plots
+```{r echo=TRUE}
+library(ggplot2)
+newActivity <- read.csv("activity.csv")
+newActivity$date <- as.Date(newActivity$date,"%Y-%m-%d")
 
+newActivity[,"weekday_end"] <- ifelse(weekdays(newActivity$date) %in% c("Saturday","Sunday"),"weekend","weekday")
 
-## Imputing missing values
+fiveMinInterval <- aggregate(newActivity$steps, by=list(interval=newActivity$interval, weekday_end=newActivity$weekday_end),FUN=mean, na.rm=TRUE)
 
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+ggplot(fiveMinInterval) + geom_line(aes(x=interval, y=x)) + facet_grid(rows = "weekday_end") + labs(y="Average Number of Steps", x="Interval")
+```
